@@ -1,15 +1,14 @@
 from tkinter import Toplevel, Label, Button, StringVar, font as tkfont, CENTER, LEFT, RIGHT
 from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import Separator
-from typing import Any
 class PopupMessage():
     """
     Author: Kevin Glentworth
     Date: August-2025
     Description: popup message with either yes/no buttons or close button.
     Returns y or n for Yes/No buttons, nothing for Close button.
-    If a textbox is used, a reference to it can be retrieved for further actions.
-    Used ScrolledText so I don't have to bother with manually adding a vertical scroll bar.
+    If a textbox is used, a reference to it can be retrieved for further actions, e.g. using tags to highlight or assign URL.
+    Used ScrolledText widget so I don't have to bother with manually adding a vertical scroll bar.
     """
     def __init__(self, master):
         self.master = master
@@ -17,20 +16,10 @@ class PopupMessage():
         self.textbox = None
 
 
-    def colour_button(self, button: Button, Enter: bool, colour:str):
-        """
-        Colours the button depending upon whether the action is <Enter> or <Leave>.
-        """
-        if Enter:
-            button.configure(bg=colour)
-        else:
-            button.configure(bg=colour)
-        
-            
     def show(self,
              title: str = '',
              message: str = '',
-             alignment: str = 'center',
+             alignment: str = 'left',
              x_pos: float = 0.2,
              y_pos: float = 0.4,
              yesno: bool = False,
@@ -43,12 +32,10 @@ class PopupMessage():
              wait: bool = True,
              font: list = ('Code New Roman', 14)):
         '''Shows a message window and waits for user to press OK or Yes/No.
-           If wait is True, the message window must be closed before control
-           returns to the calling window.
 
         :param title: str
         :param message: str
-        :param alignment: str [LEFT, CENTER, RIGHT]
+        :param alignment: str [LEFT, CENTER, RIGHT, WEST, EAST]
         :param x_pos: float [value between 0 and 1]
         :param y_pos: float [value bewtween 0 and 1]
         :param yesno: bool [Use Yes and No buttons or just a Close button]
@@ -57,7 +44,8 @@ class PopupMessage():
         :param m_width: int [width in characters]
         :param m_height: int [height in lines]
         :param max_width: int [maximum width in characters]
-        :param wait: bool [wait makes returns to calling process only after window is clsoed]
+        :param wait: bool [True returns to calling process only after window is closed.
+                           False returns immediately, leaving the textbox visible.]
         :param font: list(Family:str, size: int)
         :return:
         '''
@@ -91,7 +79,9 @@ class PopupMessage():
         self.message_window: Toplevel = Toplevel()
         self.message_window.title('')
         if alignment == '':
-            alignment = CENTER
+            alignment = LEFT
+        # get alignment based upon first character of alignment, default is 'left'. middle, centre, left, right, west, east
+        alignment = {'m':CENTER, 'c':CENTER, 'l':LEFT, 'r':RIGHT, 'w':LEFT, 'e':RIGHT}.get(alignment[:1].lower(), LEFT)
         self.s1 = StringVar(self.message_window, title)
         if title != None or title == '':
             Label(master=self.message_window,
@@ -131,8 +121,8 @@ class PopupMessage():
                                 bg='rosybrown1',
                                 font=font)
             self.b_yes.pack(side=LEFT)
-            self.b_yes.bind('<Enter>', lambda x: self.colour_button(self.b_yes, True, 'lightskyblue2'))
-            self.b_yes.bind('<Leave>', lambda x: self.colour_button(self.b_yes, False, 'rosybrown1'))
+            self.b_yes.bind('<Enter>', lambda x: self.b_yes.configure(bg='lightskyblue2'))
+            self.b_yes.bind('<Leave>', lambda x: self.b_yes.configure(bg='rosybrown1'))
             self.b_no = Button(master=self.message_window,
                                text='No',
                                command=popup_no,
@@ -143,8 +133,8 @@ class PopupMessage():
                                bg='rosybrown1',
                                font=font)
             self.b_no.pack(side=RIGHT)
-            self.b_no.bind('<Enter>', lambda x: self.colour_button(self.b_no, True, 'lightskyblue2'))
-            self.b_no.bind('<Leave>', lambda x: self.colour_button(self.b_no, False, 'rosybrown1'))
+            self.b_no.bind('<Enter>', lambda x: self.b_no.configure(bg='lightskyblue2'))
+            self.b_no.bind('<Leave>', lambda x: self.b_no.configure(bg='rosybrown1'))
             self.message_window.bind('<Return>', lambda event: popup_no())
             self.message_window.bind('<space>', lambda event: popup_no())
             self.message_window.bind('<Escape>', lambda event: popup_no())
@@ -163,8 +153,8 @@ class PopupMessage():
                                   bg='steelblue4',
                                   font=font)
             self.b_close.pack()
-            self.b_close.bind('<Enter>', lambda x: self.colour_button(self.b_close, True, 'lightskyblue2'))
-            self.b_close.bind('<Leave>', lambda x: self.colour_button(self.b_close, False, 'steelblue4'))
+            self.b_close.bind('<Enter>', lambda x: self.b_close.configure(bg='lightskyblue2'))
+            self.b_close.bind('<Leave>', lambda x: self.b_close.configure(bg='steelblue4'))
             self.message_window.bind('<Return>', lambda event: self.message_window.destroy())
             self.message_window.bind('<space>', lambda event: self.message_window.destroy())
             self.message_window.bind('<Escape>', lambda event: self.message_window.destroy())
@@ -182,14 +172,17 @@ class PopupMessage():
         """
         return self.textbox
         
+        
     def get(self) -> str:
         """
         Returns the value of self.yes_no
         """
         return self.yes_no
         
+        
     def set(self) -> None:
         """
         Sets the value of self.yes_no to 'y'
         """
         self.yes_no = 'y'
+        
