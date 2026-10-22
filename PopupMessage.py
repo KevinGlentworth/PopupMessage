@@ -1,7 +1,6 @@
 from tkinter import Tk, Toplevel, Frame, Label, Button, StringVar, font as tkfont, CENTER, LEFT, RIGHT, BOTTOM
 from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import Separator
-# from customtkinter import CTkButton
 
 class PopupMessage():
     """
