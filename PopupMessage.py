@@ -1,28 +1,36 @@
-from tkinter import Toplevel, Label, Button, StringVar, font as tkfont, CENTER, LEFT, RIGHT
+from tkinter import Tk, Toplevel, Frame, Label, Button, StringVar, font as tkfont, CENTER, LEFT, RIGHT, BOTTOM
 from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import Separator
+# from customtkinter import CTkButton
+
 class PopupMessage():
     """
     Author: Kevin Glentworth
-    Date: August-2025
-    Description: popup message with either yes/no buttons or close button.
-    Returns y or n for Yes/No buttons, nothing for Close button.
-    If a textbox is used, a reference to it can be retrieved for further actions, e.g. using tags to highlight or assign URL.
-    Used ScrolledText widget so I don't have to bother with manually adding a vertical scroll bar.
+    Date: July 2026
+    Description: popup message with buttons.
+    property answer Returns the value of the clicked button.
+    property textbox If a textbox is used, a reference to it can be retrieved for
+                     further actions, e.g. using tags to highlight text or assign a URL.
     """
+
     def __init__(self, master):
         self.master = master
-        self.yes_no: str = 'n'
-        self.textbox = None
+        self._answer: str = ''
+        self._textbox: ScrolledText = None
 
 
     def show(self,
-             title: str = '',
-             message: str = '',
+             title: str = 'Popup Message',
+             message: str = 'The default message.',
              alignment: str = 'left',
              x_pos: float = 0.2,
              y_pos: float = 0.4,
-             yesno: bool = False,
+             screen_relative: bool = False,
+             buttons: list = ['OK'],
+             default_button: int = 0,
+             default_button_colour: str = 'green',
+             other_button_colour: str = 'red',
+             window_colour: str = 'lemonchiffon',
              use_text_box: bool = False,
              multi_line: bool = False,
              m_width: int = 50, # characters
@@ -30,41 +38,43 @@ class PopupMessage():
              max_width: int = 100, # characters
              max_height: int = 30, # lines
              wait: bool = True,
-             font: list = ('Code New Roman', 14)):
-        '''Shows a message window and waits for user to press OK or Yes/No.
+             timeout: int = 0, # seconds, 0 = no timout. Closes window and returns default value after timeout.
+             show_timeout: bool = False, # show remaning timeout in window title
+             font: list = ('Code New Roman', 14),
+             variable: StringVar = None) -> str:
+        '''Shows a message window and waits for user to press a button. Button title is returned either using a
+            StringVar or via the answer property.
 
         :param title: str
         :param message: str
-        :param alignment: str [LEFT, CENTER, RIGHT, WEST, EAST]
-        :param x_pos: float [value between 0 and 1]
-        :param y_pos: float [value bewtween 0 and 1]
-        :param yesno: bool [Use Yes and No buttons or just a Close button]
+        :param alignment: str [CENTER, MIDDLE, LEFT, WEST, RIGHT, EAST]
+        :param x_pos: float [value between 0 and 1]. Value > 1 is pixels
+        :param y_pos: float [value bewtween 0 and 1]. Value > 1 is pixels.
+        :screen_relative: bool [position relative to current window or screen.]
+        :param buttons: list [If blank, just have OK button, else show these.]
+        :param default_button: int [When enter is pressed or window is closed.]
         :param use_text_box: bool [Use a textbox rather than a label]
         :param multi_line: bool [Allow multiple lines]
         :param m_width: int [width in characters]
         :param m_height: int [height in lines]
         :param max_width: int [maximum width in characters]
+        :param max_height: int [maximum height in characters]
         :param wait: bool [True returns to calling process only after window is closed.
                            False returns immediately, leaving the textbox visible.]
-        :param font: list(Family:str, size: int)
-        :return:
+        :param timeout: int [seconds to wait before returning default value]
+        :param show_timeout: bool [show timeout in window title]
+        :param font: list [Family:str, size: int)
+        :param variable: StringVar [variable used to return the button text]
+        
+        :property answer: [Returns the text of the pressed button.]
+        :property textbox: [Returns the textbox, if used.]
         '''
 
-        def popup_yes() -> None:
-            self.yes_no = 'y'
-            self.message_window.destroy()
 
-        def popup_no() -> None:
-            self.yes_no = 'n'
-            self.message_window.destroy()
-            
-        geo = self.master.winfo_geometry().replace('+', 'x').split('x')
-        width = int(geo[0])
-        height = int(geo[1])
-        left = int(geo[2])
-        top = int(geo[3])
-        new_left = int(left + width * x_pos)
-        new_top = int(top + height * y_pos)
+        self.buttons = buttons
+        self.variable = variable
+        self.title = title
+        self.show_timeout = show_timeout
         if multi_line:
             num_lines: int = 0
             lines = message.splitlines()
@@ -74,115 +84,192 @@ class PopupMessage():
                 num_lines += 1
             m_width = width + 2
             m_height = min(num_lines, m_height) - 1
-        if m_width > max_width:
-            m_width = max_width
-        self.message_window: Toplevel = Toplevel()
+        m_height = min(m_height, max_height)
+        m_width = min(m_width, max_width)
+        x_pos = abs(x_pos)
+        y_pos = abs(y_pos)
+        self.message_window: Toplevel = Toplevel(background=window_colour)
         self.message_window.title('')
+        self.message_window.attributes('-topmost', True)
         if alignment == '':
             alignment = LEFT
-        # get alignment based upon first character of alignment, default is 'left'. middle, centre, left, right, west, east
+        # get alignment based upon first character of alignment, default is 'left'.
+        # options are middle, centre, left, wset, right, east
         alignment = {'m':CENTER, 'c':CENTER, 'l':LEFT, 'r':RIGHT, 'w':LEFT, 'e':RIGHT}.get(alignment[:1].lower(), LEFT)
         self.s1 = StringVar(self.message_window, title)
         if title != None or title == '':
             Label(master=self.message_window,
                   textvariable=self.s1,
+                  background=window_colour,
                   font=font,
                   justify=alignment).pack()
             Separator(self.message_window, orient='horizontal').pack(fill='x')
-        self.textbox = None
+        self._textbox = None
         if use_text_box:
-            self.textbox = ScrolledText(master=self.message_window,
+            self._textbox = ScrolledText(master=self.message_window,
                                         fg='blue',
-                                        bg='lightyellow',
+                                        bg=window_colour,
                                         width=m_width,
                                         height=m_height,
                                         wrap='word',
                                         font=font)
-            self.textbox.pack()
-            self.textbox.insert('0.0', message)
-            self.textbox.configure(state='disabled')
+            self._textbox.pack()
+            self._textbox.insert('0.0', message)
+            self._textbox.configure(state='disabled')
         else:
             self.s2 = StringVar(self.message_window, message)
             Label(master=self.message_window,
                   textvariable=self.s2,
                   fg='navy',
-                  bg='lightyellow',
+                  bg=window_colour,
                   justify=alignment,
                   font=font).pack(side='top', pady=10, padx=10)
-        if yesno:
-            self.yes_no = 'n'
-            self.b_yes = Button(master=self.message_window,
-                                text='Yes',
-                                command=popup_yes,
-                                width=5,
-                                height=1,
-                                bd=2,
-                                fg='blue',
-                                bg='rosybrown1',
-                                font=font)
-            self.b_yes.pack(side=LEFT)
-            self.b_yes.bind('<Enter>', lambda x: self.b_yes.configure(bg='lightskyblue2'))
-            self.b_yes.bind('<Leave>', lambda x: self.b_yes.configure(bg='rosybrown1'))
-            self.b_no = Button(master=self.message_window,
-                               text='No',
-                               command=popup_no,
-                               width=5,
-                               height=1,
-                               bd=2,
-                               fg='blue',
-                               bg='rosybrown1',
-                               font=font)
-            self.b_no.pack(side=RIGHT)
-            self.b_no.bind('<Enter>', lambda x: self.b_no.configure(bg='lightskyblue2'))
-            self.b_no.bind('<Leave>', lambda x: self.b_no.configure(bg='rosybrown1'))
-            self.message_window.bind('<Return>', lambda event: popup_no())
-            self.message_window.bind('<space>', lambda event: popup_no())
-            self.message_window.bind('<Escape>', lambda event: popup_no())
-            self.message_window.bind('y', lambda event: popup_yes())
-            self.message_window.bind('n', lambda event: popup_no())
-            self.message_window.bind('Y', lambda event: popup_yes())
-            self.message_window.bind('N', lambda event: popup_no())
-        else:
-            self.b_close = Button(master=self.message_window,
-                                  text='Close',
-                                  command=self.message_window.destroy,
-                                  width=7,
-                                  height=1,
-                                  bd=2,
-                                  fg='yellow',
-                                  bg='steelblue4',
-                                  font=font)
-            self.b_close.pack()
-            self.b_close.bind('<Enter>', lambda x: self.b_close.configure(bg='lightskyblue2'))
-            self.b_close.bind('<Leave>', lambda x: self.b_close.configure(bg='steelblue4'))
-            self.message_window.bind('<Return>', lambda event: self.message_window.destroy())
-            self.message_window.bind('<space>', lambda event: self.message_window.destroy())
-            self.message_window.bind('<Escape>', lambda event: self.message_window.destroy())
-        self.message_window.geometry(f'+{new_left}+{new_top}')
+        max_len = 0
+        if len(buttons) == 0:
+            buttons=['OK']
+        for b in buttons:
+            max_len = max(max_len, len(b))
+        max_len += 2 # Allow for space at each end
+        max_len = max(max_len, 8) # Button is at least 8 characters
+        new_buttons: list = []
+        if default_button < 0:
+            default_button = 0
+        if default_button >= len(buttons):
+            default_button = len(buttons) - 1
+        # Centre the button text in the button.
+        # buttons_bound = set()
+        for index, button in enumerate(buttons):
+            leading_chars = int((max_len - len(button)) / 2)
+            trailing_chars = max_len - len(button) - leading_chars
+            new_button: str = ' ' * (leading_chars-1) + button + ' ' * (trailing_chars-1)
+            new_buttons.append(new_button)
+        # buttons = new_buttons.copy()
+        my_frame = Frame(master=self.message_window, bg=window_colour)
+        for index, button in enumerate(new_buttons):
+            if index == default_button:
+                b_colour = default_button_colour
+            else:
+                b_colour = other_button_colour
+            b = Button(master=my_frame, text=button, width=max_len, font=font, fg=b_colour)
+            b.configure(command=lambda x=button: self.popup_answer(x))
+            b.grid(row=0, column=index, padx=6, pady=2)
+        my_frame.pack()
         self.message_window.update_idletasks()
+        if screen_relative:
+            master_width = self.master.winfo_screenwidth()
+            master_height = self.master.winfo_screenheight()
+            master_left = 0
+            master_top = 0
+        else:
+            geo = self.master.winfo_geometry().replace('+', 'x').split('x')
+            master_width = int(geo[0])
+            master_height = int(geo[1])
+            master_left = int(geo[2])
+            master_top = int(geo[3])
+        geo = self.message_window.winfo_geometry().replace('+', 'x').split('x')
+        width = int(geo[0])
+        height = int(geo[1])
+        if 0 < x_pos < 1:
+            new_left = int(master_left + master_width * x_pos)
+        else:
+            new_left = int(x_pos)
+        if 0 < y_pos < 1:
+            new_top = int(master_top + master_height * y_pos)
+        else:
+            new_top = int(y_pos)
+        if new_left + width > self.master.winfo_screenwidth():
+            new_left = self.master.winfo_screenwidth() - width - 10
+        if new_top + height > self.master.winfo_screenheight():
+            new_top = self.master.winfo_screenheight() - height - 30 # Use 30 for visible taskbar.
+        self.message_window.geometry(f'+{new_left}+{new_top}')
+        self.message_window.protocol('WM_DELETE_WINDOW', lambda: self.popup_answer(new_buttons[default_button]))
+        self.message_window.bind('<Return>', lambda event: self.popup_answer(new_buttons[default_button]))
+        self.message_window.bind('<space>', lambda event: self.popup_answer(new_buttons[default_button]))
+        self.message_window.bind('<Escape>', lambda event: self.popup_answer(new_buttons[default_button]))
         self.message_window.focus_force()
+        if timeout > 0 and timeout <= 60:
+            self.message_window.after(timeout * 1000, lambda: self.popup_answer())
+            if self.show_timeout:
+                self.time_left: int = timeout
+                self.update_timer()
+                #self.message_window.after(1000, lambda:self.update_timer())
         if wait:
             self.message_window.grab_set()
             self.master.wait_window(self.message_window)
         
-    def get_textbox(self) -> any:
-        """
-        Returns the textbox created. If no textbox was used, returns None. This allows other operations to be performed
-        on the textbox by the calling program.
-        """
-        return self.textbox
+
+    def popup_answer(self, answer:str='') -> None:
+        if answer == '':
+            answer=self.buttons[0]
+        self._answer = answer.strip(' ')
+        if self.variable is not None:
+            self.variable.set(self._answer)
+        self.message_window.destroy()
+
+    def update_timer(self):
+        self.s1.set(f'{self.title} {str(self.time_left)}s')
+        self.time_left -= 1
+        if self.time_left > 0:
+            self.message_window.after(1000, lambda:self.update_timer())
+
+
+    @property
+    def answer(self) -> str:
+        '''
+        Returns the label off the clicked, or default, button.
+        '''
+        return self._answer
+
         
-        
-    def get(self) -> str:
-        """
-        Returns the value of self.yes_no
-        """
-        return self.yes_no
-        
-        
-    def set(self) -> None:
-        """
-        Sets the value of self.yes_no to 'y'
-        """
-        self.yes_no = 'y'
-        
+    @property
+    def textbox(self) -> ScrolledText:
+        '''
+        Returns the textbox created. If no textbox was used, returns None. This allows other operations to be
+         performed on the textbox by the calling program.
+        '''
+        return self._textbox
+
+def _test():
+    tk = Tk()
+    tk.geometry('1x1+100+100')
+    tk.overrideredirect(True)
+
+    print('** PopupMessage **')
+    pm = PopupMessage(tk)
+    return_value = StringVar()
+    return_value.set('')
+    pm.show(timeout=10, show_timeout=True)
+    print(f'pm.answer={pm.answer}')
+    pm.show(title='Testing new PopupMessage',
+            message='Multiple Options, default = 2nd button',
+            x_pos=0.25, y_pos=0.25,
+            use_text_box=True,
+            max_height=5,
+            buttons=['Accept', 'Cancel', 'Dismiss', 'Ignore', 'Fail'],
+            default_button=1,
+            variable = return_value)
+    print(f'pm.answer={pm.answer}')
+    print(f'StringVar return_value={return_value.get()}')
+    pm.show(title='Testing new PopupMessage',
+            message='One Button, bottom right',
+            x_pos=3400, y_pos=1400,
+            use_text_box=True,
+            max_height=5,
+            buttons=['No way'],
+            screen_relative=True)
+    print(f'pm.answer={pm.answer}')
+    pm.show(title='Testing new PopupMessage',
+            message='Default Buttons',
+            x_pos=350, y_pos=300,
+            max_height=5)
+    print(f'pm.answer={pm.answer}')
+    pm.show(title='Testing new PopupMessage',
+            message='Good afternoon',
+            x_pos=-350, y_pos=-300,
+            max_height=5,
+            buttons=['One', 'Two', 'Three'])
+    print(f'pm.answer={pm.answer}')
+    exit()
+
+if __name__ == '__main__':
+    _test()
