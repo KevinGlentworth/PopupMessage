@@ -22,8 +22,8 @@ class PopupMessage():
              title: str = 'Popup Message',
              message: str = 'The default message.',
              alignment: str = 'left',
-             x_pos: float = 0.2,
-             y_pos: float = 0.4,
+             x_pos: float | str | int = 0.2,
+             y_pos: float | str | int = 0.4,
              screen_relative: bool = False,
              buttons: list = ['OK'],
              default_button: int = 0,
@@ -48,7 +48,11 @@ class PopupMessage():
         :param message: str
         :param alignment: str [CENTER, MIDDLE, LEFT, WEST, RIGHT, EAST]
         :param x_pos: float [value between 0 and 1]. Value > 1 is pixels
-        :param y_pos: float [value bewtween 0 and 1]. Value > 1 is pixels.
+                            [valid str values l, w, r, e, c, m, nw, ne, sw, se]
+                            [ left west right east center middle ...]
+        :param y_pos: float [value between 0 and 1]. Value > 1 is pixels.
+                            [valid str values t, n, b, s, c, m]
+                            [top north bottom south centre middle]
         :screen_relative: bool [position relative to current window or screen.]
         :param buttons: list [If blank, just have OK button, else show these.]
         :param default_button: int [When enter is pressed or window is closed.]
@@ -85,6 +89,34 @@ class PopupMessage():
             m_height = min(num_lines, m_height) - 1
         m_height = min(m_height, max_height)
         m_width = min(m_width, max_width)
+        if isinstance(x_pos, str):
+            match x_pos:
+                case 'l' | 'w': # left, west
+                    x_pos = 0.0
+                case 'c' | 'm': # centre, middle
+                    x_pos = 0.5
+                case 'r' | 'e': # right, east
+                    x_pos = 1.0
+                case 'nw':
+                    x_pos, y_pos = 0.0, 0.0
+                case 'ne':
+                    x_pos, y_pos = 0.0, 1.0
+                case 'sw':
+                    x_pos, y_pos = 1.0, 0.0
+                case 'se':
+                    x_pos, y_pos = 1.0, 1.0
+                case _:
+                    x_pos = 0.0
+        if isinstance(y_pos, str):
+            match y_pos:
+                case 't' | 'n': # top, north
+                    y_pos = 0.0
+                case 'c' | 'm': # centre, middle
+                    y_pos = 0.5
+                case 'b' | 's': # bottom, south
+                    y_pos = 1.0
+                case _:
+                    y_pos = 0.0
         x_pos = abs(x_pos)
         y_pos = abs(y_pos)
         self.message_window: Toplevel = Toplevel(background=window_colour)
@@ -136,13 +168,11 @@ class PopupMessage():
         if default_button >= len(buttons):
             default_button = len(buttons) - 1
         # Centre the button text in the button.
-        # buttons_bound = set()
         for index, button in enumerate(buttons):
             leading_chars = int((max_len - len(button)) / 2)
             trailing_chars = max_len - len(button) - leading_chars
             new_button: str = ' ' * (leading_chars-1) + button + ' ' * (trailing_chars-1)
             new_buttons.append(new_button)
-        # buttons = new_buttons.copy()
         my_frame = Frame(master=self.message_window, bg=window_colour)
         for index, button in enumerate(new_buttons):
             if index == default_button:
@@ -168,11 +198,11 @@ class PopupMessage():
         geo = self.message_window.winfo_geometry().replace('+', 'x').split('x')
         width = int(geo[0])
         height = int(geo[1])
-        if 0 < x_pos < 1:
+        if 0 < x_pos <= 1:
             new_left = int(master_left + master_width * x_pos)
         else:
             new_left = int(x_pos)
-        if 0 < y_pos < 1:
+        if 0 < y_pos <= 1:
             new_top = int(master_top + master_height * y_pos)
         else:
             new_top = int(y_pos)
@@ -191,7 +221,6 @@ class PopupMessage():
             if self.show_timeout:
                 self.time_left: int = timeout
                 self.update_timer()
-                #self.message_window.after(1000, lambda:self.update_timer())
         if wait:
             self.message_window.grab_set()
             self.master.wait_window(self.message_window)
@@ -239,7 +268,7 @@ def _test():
     return_value.set('')
     pm.show(timeout=10, show_timeout=True)
     print(f'pm.answer={pm.answer}')
-    pm.show(title='Testing new PopupMessage',
+    pm.show(title='Testing PopupMessage',
             message='Multiple Options, default = 2nd button',
             x_pos=0.25, y_pos=0.25,
             use_text_box=True,
@@ -249,20 +278,22 @@ def _test():
             variable = return_value)
     print(f'pm.answer={pm.answer}')
     print(f'StringVar return_value={return_value.get()}')
-    pm.show(title='Testing new PopupMessage',
+    pm.show(title='Testing PopupMessage',
             message='One Button, bottom right',
-            x_pos=3400, y_pos=1400,
+            # x_pos=3400, y_pos=1400,
+            # x_pos='r', y_pos='b',
+            x_pos='se',
             use_text_box=True,
             max_height=5,
             buttons=['No way'],
             screen_relative=True)
     print(f'pm.answer={pm.answer}')
-    pm.show(title='Testing new PopupMessage',
+    pm.show(title='Testing PopupMessage',
             message='Default Buttons',
             x_pos=350, y_pos=300,
             max_height=5)
     print(f'pm.answer={pm.answer}')
-    pm.show(title='Testing new PopupMessage',
+    pm.show(title='Testing PopupMessage',
             message='Good afternoon',
             x_pos=-350, y_pos=-300,
             max_height=5,
