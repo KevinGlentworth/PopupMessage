@@ -7,15 +7,12 @@ class PopupMessage():
     Author: Kevin Glentworth
     Date: July 2026
     Description: popup message with buttons.
-    property answer Returns the value of the clicked button.
-    property textbox If a textbox is used, a reference to it can be retrieved for
-                     further actions, e.g. using tags to highlight text or assign a URL.
+    answer property or StringVar returns the value of the clicked button.
     """
 
     def __init__(self, master):
         self.master = master
         self._answer: str = ''
-        self._textbox: ScrolledText = None
 
 
     def show(self,
@@ -38,39 +35,49 @@ class PopupMessage():
              max_height: int = 30, # lines
              wait: bool = True,
              timeout: int = 0, # seconds, 0 = no timout. Closes window and returns default value after timeout.
-             show_timeout: bool = False, # show remaning timeout in window title
+             show_timeout: bool = False,
              font: list = ('Code New Roman', 14),
              variable: StringVar = None) -> str:
-        '''Shows a message window and waits for user to press a button. Button title is returned either using a
-            StringVar or via the answer property.
-
-        :param title: str
-        :param message: str
-        :param alignment: str [CENTER, MIDDLE, LEFT, WEST, RIGHT, EAST]
-        :param x_pos: float [value between 0 and 1]. Value > 1 is pixels
-                            [valid str values l, w, r, e, c, m, nw, ne, sw, se]
-                            [ left west right east center middle ...]
-        :param y_pos: float [value between 0 and 1]. Value > 1 is pixels.
-                            [valid str values t, n, b, s, c, m]
-                            [top north bottom south centre middle]
-        :screen_relative: bool [position relative to current window or screen.]
-        :param buttons: list [If blank, just have OK button, else show these.]
-        :param default_button: int [When enter is pressed or window is closed.]
-        :param use_text_box: bool [Use a textbox rather than a label]
-        :param multi_line: bool [Allow multiple lines]
-        :param m_width: int [width in characters]
-        :param m_height: int [height in lines]
-        :param max_width: int [maximum width in characters]
-        :param max_height: int [maximum height in characters]
-        :param wait: bool [True returns to calling process only after window is closed.
-                           False returns immediately, leaving the textbox visible.]
-        :param timeout: int [seconds to wait before returning default value]
-        :param show_timeout: bool [show timeout in window title]
-        :param font: list [Family:str, size: int)
-        :param variable: StringVar [variable used to return the button text]
+        '''Show a message window and waits for user to press a button or wait for timeout.
         
-        :property answer: [Returns the text of the pressed button.]
-        :property textbox: [Returns the textbox, if used.]
+           Button title is returned using either the StringVar variable or via the answer property.
+
+        Args:
+            title (str):
+            message (str):
+            alignment (str): Alignment of message text.
+                             Middle, Center, Left, Right, West, East.
+            x_pos (float | int | str) x location on screen.
+                                      value between 0.0 and 1.0 -  0.0 = Left, 1.0 = Right
+                                      Value > 1 is pixels
+                                      valid str values l, w, r, e, c, m, nw, ne, sw, se
+                                      left west right east center middle ...
+            y_pos (float | int | str) y location on screen.
+                                      value between 0.0 and 1.0 -  0.0 = Top, 1.0 = Bottom
+                                      Value > 1 is pixels
+                                      valid str values t, n, b, s, c, m
+                                      top north bottom south centre middle
+            screen_relative (bool) position relative to current window or screen
+            buttons (list): If blank, just have OK button, else show these
+            default_button (int): When enter is pressed or window is closed
+            use_text_box (bool): Use a textbox rather than a label
+            multi_line (bool): Allow multiple lines
+            m_width (int): width in characters
+            m_height (int): height in lines
+            max_width (int): maximum width in characters
+            max_height (int): maximum height in characters
+            wait (bool): True returns to calling process only after window is closed
+                         False returns immediately, leaving the label/textbox visible
+            timeout (int): seconds to wait before returning default value, 0 = no timeout.
+            show_timeout (bool): show timeout countdown in window
+            font (list): (Family: str, size: int):
+            variable (StringVar): variable used to return the button text
+
+        Returns:
+            
+
+        Propertys:
+            answer (StringVar): Returns the text of the pressed button
         '''
 
 
@@ -106,7 +113,7 @@ class PopupMessage():
                 case 'se':
                     x_pos, y_pos = 1.0, 1.0
                 case _:
-                    x_pos = 0.0
+                    x_pos = 0.2
         if isinstance(y_pos, str):
             match y_pos:
                 case 't' | 'n': # top, north
@@ -116,7 +123,7 @@ class PopupMessage():
                 case 'b' | 's': # bottom, south
                     y_pos = 1.0
                 case _:
-                    y_pos = 0.0
+                    y_pos = 0.4
         x_pos = abs(x_pos)
         y_pos = abs(y_pos)
         self.message_window: Toplevel = Toplevel(background=window_colour)
@@ -127,26 +134,27 @@ class PopupMessage():
         # get alignment based upon first character of alignment, default is 'left'.
         # options are middle, centre, left, wset, right, east
         alignment = {'m':CENTER, 'c':CENTER, 'l':LEFT, 'r':RIGHT, 'w':LEFT, 'e':RIGHT}.get(alignment[:1].lower(), LEFT)
-        self.s1 = StringVar(self.message_window, title)
+        # self.s1 = StringVar(self.message_window, title)
         if title != None or title == '':
             Label(master=self.message_window,
-                  textvariable=self.s1,
+                  #   textvariable=self.s1,
+                  text = title,
                   background=window_colour,
                   font=font,
                   justify=alignment).pack()
             Separator(self.message_window, orient='horizontal').pack(fill='x')
-        self._textbox = None
+        msg_box = None
         if use_text_box:
-            self._textbox = ScrolledText(master=self.message_window,
+            msg_box = ScrolledText(master=self.message_window,
                                         fg='blue',
                                         bg=window_colour,
                                         width=m_width,
                                         height=m_height,
                                         wrap='word',
                                         font=font)
-            self._textbox.pack()
-            self._textbox.insert('0.0', message)
-            self._textbox.configure(state='disabled')
+            msg_box.pack()
+            msg_box.insert('0.0', message)
+            msg_box.configure(state='disabled')
         else:
             self.s2 = StringVar(self.message_window, message)
             Label(master=self.message_window,
@@ -182,6 +190,9 @@ class PopupMessage():
             b = Button(master=my_frame, text=button, width=max_len, font=font, fg=b_colour)
             b.configure(command=lambda x=button: self.popup_answer(x))
             b.grid(row=0, column=index, padx=6, pady=2)
+        if self.show_timeout:
+            self.timer_label = Label(master=my_frame, bg=window_colour, font=(font[0], font[1]-1))
+            self.timer_label.grid(row=1, column=0, columnspan=index+1)
         my_frame.pack()
         self.message_window.update_idletasks()
         if screen_relative:
@@ -217,7 +228,7 @@ class PopupMessage():
         self.message_window.bind('<Escape>', lambda event: self.popup_answer(new_buttons[default_button]))
         self.message_window.focus_force()
         if timeout > 0 and timeout <= 60:
-            self.message_window.after(timeout * 1000, lambda: self.popup_answer())
+            self.message_window.after(timeout * 1000, lambda: self.popup_answer(''))
             if self.show_timeout:
                 self.time_left: int = timeout
                 self.update_timer()
@@ -235,7 +246,8 @@ class PopupMessage():
         self.message_window.destroy()
 
     def update_timer(self):
-        self.s1.set(f'{self.title} {str(self.time_left)}s')
+        l = '' if self.time_left == 1 else 's'
+        self.timer_label.configure(text=f'{str(self.time_left)} second{l} left')
         self.time_left -= 1
         if self.time_left > 0:
             self.message_window.after(1000, lambda:self.update_timer())
@@ -249,14 +261,6 @@ class PopupMessage():
         return self._answer
 
         
-    @property
-    def textbox(self) -> ScrolledText:
-        '''
-        Returns the textbox created. If no textbox was used, returns None. This allows other operations to be
-         performed on the textbox by the calling program.
-        '''
-        return self._textbox
-
 def _test():
     tk = Tk()
     tk.geometry('1x1+100+100')
@@ -280,8 +284,6 @@ def _test():
     print(f'StringVar return_value={return_value.get()}')
     pm.show(title='Testing PopupMessage',
             message='One Button, bottom right',
-            # x_pos=3400, y_pos=1400,
-            # x_pos='r', y_pos='b',
             x_pos='se',
             use_text_box=True,
             max_height=5,
@@ -292,12 +294,6 @@ def _test():
             message='Default Buttons',
             x_pos=350, y_pos=300,
             max_height=5)
-    print(f'pm.answer={pm.answer}')
-    pm.show(title='Testing PopupMessage',
-            message='Good afternoon',
-            x_pos=-350, y_pos=-300,
-            max_height=5,
-            buttons=['One', 'Two', 'Three'])
     print(f'pm.answer={pm.answer}')
     exit()
 
