@@ -1,4 +1,4 @@
-from tkinter import Tk, Toplevel, Frame, Label, Button, StringVar, font as tkfont, CENTER, LEFT, RIGHT, BOTTOM
+from tkinter import Tk, Toplevel, Frame, Label, Button, font as tkfont, CENTER, LEFT, RIGHT, BOTTOM
 from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import Separator
 
@@ -7,7 +7,7 @@ class PopupMessage():
     Author: Kevin Glentworth
     Date: July 2026
     Description: popup message with buttons.
-    answer property or StringVar returns the value of the clicked button.
+    .show returns the value of the clicked button.
     """
 
     def __init__(self, master):
@@ -33,14 +33,12 @@ class PopupMessage():
              m_height: int = 30, # lines
              max_width: int = 100, # characters
              max_height: int = 30, # lines
-             wait: bool = True,
              timeout: int = 0, # seconds, 0 = no timout. Closes window and returns default value after timeout.
              show_timeout: bool = False,
-             font: list = ('Code New Roman', 14),
-             variable: StringVar = None) -> str:
+             font: list = ('Code New Roman', 14)) -> str:
         '''Show a message window and waits for user to press a button or wait for timeout.
         
-           Button title is returned using either the StringVar variable or via the answer property.
+           Button title is returned.
 
         Args:
             title (str):
@@ -66,24 +64,17 @@ class PopupMessage():
             m_height (int): height in lines
             max_width (int): maximum width in characters
             max_height (int): maximum height in characters
-            wait (bool): True returns to calling process only after window is closed
-                         False returns immediately, leaving the label/textbox visible
             timeout (int): seconds to wait before returning default value, 0 = no timeout.
             show_timeout (bool): show timeout countdown in window
             font (list): (Family: str, size: int):
-            variable (StringVar): variable used to return the button text
 
         Returns:
-            
-
-        Propertys:
-            answer (StringVar): Returns the text of the pressed button
+            button text
         '''
 
-
         self.buttons = buttons
-        self.variable = variable
         self.title = title
+        self.timeout = timeout
         self.show_timeout = show_timeout
         if multi_line:
             num_lines: int = 0
@@ -132,12 +123,10 @@ class PopupMessage():
         if alignment == '':
             alignment = LEFT
         # get alignment based upon first character of alignment, default is 'left'.
-        # options are middle, centre, left, wset, right, east
+        # options are middle, centre, left, west, right, east
         alignment = {'m':CENTER, 'c':CENTER, 'l':LEFT, 'r':RIGHT, 'w':LEFT, 'e':RIGHT}.get(alignment[:1].lower(), LEFT)
-        # self.s1 = StringVar(self.message_window, title)
         if title != None or title == '':
             Label(master=self.message_window,
-                  #   textvariable=self.s1,
                   text = title,
                   background=window_colour,
                   font=font,
@@ -156,9 +145,8 @@ class PopupMessage():
             msg_box.insert('0.0', message)
             msg_box.configure(state='disabled')
         else:
-            self.s2 = StringVar(self.message_window, message)
             Label(master=self.message_window,
-                  textvariable=self.s2,
+                  text=message,
                   fg='navy',
                   bg=window_colour,
                   justify=alignment,
@@ -230,35 +218,29 @@ class PopupMessage():
         if timeout > 0 and timeout <= 60:
             self.message_window.after(timeout * 1000, lambda: self.popup_answer(''))
             if self.show_timeout:
-                self.time_left: int = timeout
+                self.time_left: int = self.timeout
                 self.update_timer()
-        if wait:
-            self.message_window.grab_set()
-            self.master.wait_window(self.message_window)
-        
+        self.message_window.grab_set()
+        self.master.wait_window(self.message_window)
+        return self._answer
 
     def popup_answer(self, answer:str='') -> None:
         if answer == '':
             answer=self.buttons[0]
         self._answer = answer.strip(' ')
-        if self.variable is not None:
-            self.variable.set(self._answer)
         self.message_window.destroy()
 
     def update_timer(self):
+        '''Update text colour, gradually change from green (0, 127, 0) to red (255, 0, 0)
+        '''
+        diff = int(255 * self.time_left / self.timeout)
+        s = f'#{(255-diff):02X}{int(diff/2):02X}{0:02X}'
+        self.timer_label.configure(fg = s)
         l = '' if self.time_left == 1 else 's'
         self.timer_label.configure(text=f'{str(self.time_left)} second{l} left')
         self.time_left -= 1
         if self.time_left > 0:
             self.message_window.after(1000, lambda:self.update_timer())
-
-
-    @property
-    def answer(self) -> str:
-        '''
-        Returns the label off the clicked, or default, button.
-        '''
-        return self._answer
 
         
 def _test():
@@ -268,33 +250,32 @@ def _test():
 
     print('** PopupMessage **')
     pm = PopupMessage(tk)
-    return_value = StringVar()
-    return_value.set('')
-    pm.show(timeout=10, show_timeout=True)
-    print(f'pm.answer={pm.answer}')
-    pm.show(title='Testing PopupMessage',
+    return_value = pm.show(timeout=10, show_timeout=True)
+    print(f'return_value={return_value}')
+    return_value = pm.show(
+            title='Testing PopupMessage',
             message='Multiple Options, default = 2nd button',
             x_pos=0.25, y_pos=0.25,
             use_text_box=True,
             max_height=5,
             buttons=['Accept', 'Cancel', 'Dismiss', 'Ignore', 'Fail'],
-            default_button=1,
-            variable = return_value)
-    print(f'pm.answer={pm.answer}')
-    print(f'StringVar return_value={return_value.get()}')
-    pm.show(title='Testing PopupMessage',
+            default_button=1)
+    print(f'return_value={return_value}')
+    return_value = pm.show(
+            title='Testing PopupMessage',
             message='One Button, bottom right',
             x_pos='se',
             use_text_box=True,
             max_height=5,
             buttons=['No way'],
             screen_relative=True)
-    print(f'pm.answer={pm.answer}')
-    pm.show(title='Testing PopupMessage',
+    print(f'return_value={return_value}')
+    return_value = pm.show(
+            title='Testing PopupMessage',
             message='Default Buttons',
             x_pos=350, y_pos=300,
             max_height=5)
-    print(f'pm.answer={pm.answer}')
+    print(f'return_value={return_value}')
     exit()
 
 if __name__ == '__main__':
