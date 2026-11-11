@@ -1,6 +1,6 @@
-from tkinter import Tk, Toplevel, Frame, Label, Button, font as tkfont, CENTER, LEFT, RIGHT, BOTTOM
-from tkinter.scrolledtext import ScrolledText
-from tkinter.ttk import Separator
+import tkinter as tk
+from tkinter.scrolledtext import ScrolledText as tk_ScrolledText
+from tkinter.ttk import Separator as ttk_Separator
 
 class PopupMessage():
     """
@@ -36,7 +36,7 @@ class PopupMessage():
              timeout: int = 0, # seconds, 0 = no timout. Closes window and returns default value after timeout.
              show_timeout: bool = False,
              font: list = ('Code New Roman', 14)) -> str:
-        '''Show a message window and waits for user to press a button or wait for timeout.
+        '''Show a message window and wait for user to press a button or wait for timeout.
         
            Button title is returned.
 
@@ -45,17 +45,17 @@ class PopupMessage():
             message (str):
             alignment (str): Alignment of message text.
                              Middle, Center, Left, Right, West, East.
-            x_pos (float | int | str) x location on screen.
-                                      value between 0.0 and 1.0 -  0.0 = Left, 1.0 = Right
-                                      Value > 1 is pixels
-                                      valid str values l, w, r, e, c, m, nw, ne, sw, se
-                                      left west right east center middle ...
-            y_pos (float | int | str) y location on screen.
-                                      value between 0.0 and 1.0 -  0.0 = Top, 1.0 = Bottom
-                                      Value > 1 is pixels
-                                      valid str values t, n, b, s, c, m
-                                      top north bottom south centre middle
-            screen_relative (bool) position relative to current window or screen
+            x_pos (float | int | str): x location on screen.
+                                       value between 0.0 and 1.0 -  0.0 = Left, 1.0 = Right
+                                       Value > 1 is pixels
+                                       valid str values l, w, r, e, c, m, nw, ne, sw, se
+                                       left west right east center middle ...
+            y_pos (float | int | str): y location on screen.
+                                       value between 0.0 and 1.0 -  0.0 = Top, 1.0 = Bottom
+                                       Value > 1 is pixels
+                                       valid str values t, n, b, s, c, m
+                                       top north bottom south centre middle
+            screen_relative (bool): position relative to current window or screen
             buttons (list): If blank, just have OK button, else show these
             default_button (int): When enter is pressed or window is closed
             use_text_box (bool): Use a textbox rather than a label
@@ -117,40 +117,45 @@ class PopupMessage():
                     y_pos = 0.4
         x_pos = abs(x_pos)
         y_pos = abs(y_pos)
-        self.message_window: Toplevel = Toplevel(background=window_colour)
+        self.message_window: tk.Toplevel = tk.Toplevel(background=window_colour)
         self.message_window.title('')
         self.message_window.attributes('-topmost', True)
         if alignment == '':
-            alignment = LEFT
+            alignment = tk.LEFT
         # get alignment based upon first character of alignment, default is 'left'.
         # options are middle, centre, left, west, right, east
-        alignment = {'m':CENTER, 'c':CENTER, 'l':LEFT, 'r':RIGHT, 'w':LEFT, 'e':RIGHT}.get(alignment[:1].lower(), LEFT)
+        alignment = {'m':tk.CENTER,
+                     'c':tk.CENTER,
+                     'l':tk.LEFT,
+                     'r':tk.RIGHT,
+                     'w':tk.LEFT,
+                     'e':tk.RIGHT}.get(alignment[:1].lower(), tk.LEFT)
         if title != None or title == '':
-            Label(master=self.message_window,
-                  text = title,
-                  background=window_colour,
-                  font=font,
-                  justify=alignment).pack()
-            Separator(self.message_window, orient='horizontal').pack(fill='x')
+            tk.Label(master=self.message_window,
+                     text = title,
+                     background=window_colour,
+                     font=font,
+                     justify=alignment).pack()
+            ttk_Separator(self.message_window, orient='horizontal').pack(fill='x')
         msg_box = None
         if use_text_box:
-            msg_box = ScrolledText(master=self.message_window,
-                                        fg='blue',
-                                        bg=window_colour,
-                                        width=m_width,
-                                        height=m_height,
-                                        wrap='word',
-                                        font=font)
+            msg_box = tk_ScrolledText(master=self.message_window,
+                                      fg='blue',
+                                      bg=window_colour,
+                                      width=m_width,
+                                      height=m_height,
+                                      wrap='word',
+                                      font=font)
             msg_box.pack()
             msg_box.insert('0.0', message)
             msg_box.configure(state='disabled')
         else:
-            Label(master=self.message_window,
-                  text=message,
-                  fg='navy',
-                  bg=window_colour,
-                  justify=alignment,
-                  font=font).pack(side='top', pady=10, padx=10)
+            tk.Label(master=self.message_window,
+                     text=message,
+                     fg='navy',
+                     bg=window_colour,
+                     justify=alignment,
+                     font=font).pack(side='top', pady=10, padx=10)
         max_len = 0
         if len(buttons) == 0:
             buttons=['OK']
@@ -169,17 +174,17 @@ class PopupMessage():
             trailing_chars = max_len - len(button) - leading_chars
             new_button: str = ' ' * (leading_chars-1) + button + ' ' * (trailing_chars-1)
             new_buttons.append(new_button)
-        my_frame = Frame(master=self.message_window, bg=window_colour)
+        my_frame = tk.Frame(master=self.message_window, bg=window_colour)
         for index, button in enumerate(new_buttons):
             if index == default_button:
                 b_colour = default_button_colour
             else:
                 b_colour = other_button_colour
-            b = Button(master=my_frame, text=button, width=max_len, font=font, fg=b_colour)
+            b = tk.Button(master=my_frame, text=button, width=max_len, font=font, fg=b_colour)
             b.configure(command=lambda x=button: self.popup_answer(x))
             b.grid(row=0, column=index, padx=6, pady=2)
         if self.show_timeout:
-            self.timer_label = Label(master=my_frame, bg=window_colour, font=(font[0], font[1]-1))
+            self.timer_label = tk.Label(master=my_frame, bg=window_colour, font=(font[0], font[1]-1))
             self.timer_label.grid(row=1, column=0, columnspan=index+1)
         my_frame.pack()
         self.message_window.update_idletasks()
@@ -224,7 +229,7 @@ class PopupMessage():
         self.master.wait_window(self.message_window)
         return self._answer
 
-    def popup_answer(self, answer:str='') -> None:
+    def popup_answer(self, answer: str='') -> None:
         if answer == '':
             answer=self.buttons[0]
         self._answer = answer.strip(' ')
@@ -244,12 +249,12 @@ class PopupMessage():
 
         
 def _test():
-    tk = Tk()
-    tk.geometry('1x1+100+100')
-    tk.overrideredirect(True)
+    root = tk.Tk()
+    root.geometry('1x1+100+100')
+    root.overrideredirect(True)
 
     print('** PopupMessage **')
-    pm = PopupMessage(tk)
+    pm = PopupMessage(root)
     return_value = pm.show(timeout=10, show_timeout=True)
     print(f'return_value={return_value}')
     return_value = pm.show(
